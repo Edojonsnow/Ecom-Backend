@@ -8,6 +8,7 @@ exports.createOrder = async (req, res) => {
       products,
       totalAmount,
       shippingAddress,
+      statusHistory: [{ status: "Pending", note: "Order placed" }],
     });
     const savedOrder = await newOrder.save();
     res.status(201).json(savedOrder);
@@ -24,6 +25,15 @@ exports.getUserOrders = async (req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
+  }
+};
+exports.adminAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json(orders);
+    console.log({ user: req.user.id, is });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching data" });
   }
 };
 
@@ -46,17 +56,19 @@ exports.getOrderById = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const updatedOrder = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-    if (!updatedOrder) {
+    const { status, note } = req.body;
+    const order = Order.findById(req.params.id);
+    if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-    res.json(updatedOrder);
+    order.status = status;
+    order.statusHistory.push({ status, note });
+    if (status === "Shipped") {
+      order.trackingNumber = req.body.trackingNumber;
+    }
+    await order.save();
+    res.json(order);
   } catch (error) {
-    res.status(400).json({ message: "Invalid order data" });
+    res.status(500).json({ message: "Error updating order status", error });
   }
 };

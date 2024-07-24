@@ -43,7 +43,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const payload = { user: { id: user.id } };
+    const payload = { user: { id: user.id, isAdmin: user.isAdmin } };
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
