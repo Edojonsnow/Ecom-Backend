@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "osahon",
+    "email": "osahon@yahoo.com",
+    "password": "$2a$10$ZpMkHsWonMocJE9P.6FfFen0PtsKBS1ebuZ1kddj/L.AnaYyo5h32",
+    "isAdmin": false
+  },
+  {
+    "id": 2,
+    "name": "osahon1",
+    "email": "osahon1@yahoo.com",
+    "password": "$2a$10$GkQnXYkKiyneIOT7X0lkeOBr4LE/E0bfTE7QEKzrkaahUB0cJChrC",
+    "isAdmin": false
+  },
+  {
+    "id": 3,
+    "name": "osahon6",
+    "email": "osahon7@yahoo.com",
+    "password": "$2a$10$Vyk6OJiyi10/s1pIyJrwZu6cspvKkf7o7.Cz2.zko6yTo/51fzSta",
+    "isAdmin": false
+  }
+]
