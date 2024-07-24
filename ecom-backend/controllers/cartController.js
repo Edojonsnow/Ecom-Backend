@@ -30,6 +30,28 @@ exports.addItemToCart = async (req, res) => {
   }
 };
 
+exports.deleteItem = async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ user: req.user.id });
+    if (!cart) return res.status(404).json({ message: "Cart not found." });
+
+    cart.items = cart.items.filter(
+      (item) => item.product.toString() !== req.params.productId
+    );
+
+    cart.total = cart.items.reduce(
+      (total, item) => (total + item.price) * item.quantity,
+      0
+    );
+
+    await cart.save();
+    res.json(cart);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 exports.getCartItems = async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user.id }).populate(
