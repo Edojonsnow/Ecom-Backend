@@ -13,6 +13,7 @@ exports.createOrder = async (req, res) => {
     const savedOrder = await newOrder.save();
     res.status(201).json(savedOrder);
   } catch (error) {
+    console.log(error);
     res.status(400).json({ message: "Invalid order data" });
   }
 };
@@ -31,7 +32,7 @@ exports.adminAllOrders = async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
     res.json(orders);
-    console.log({ user: req.user.id, is });
+    console.log({ user: req.user.id });
   } catch (error) {
     res.status(500).json({ message: "Error fetching data" });
   }
@@ -70,5 +71,38 @@ exports.updateOrderStatus = async (req, res) => {
     res.json(order);
   } catch (error) {
     res.status(500).json({ message: "Error updating order status", error });
+  }
+};
+
+exports.searchAllOrders = async (req, res) => {
+  try {
+    const { status, _id, totalAmount } = req.query;
+
+    let query = {};
+
+    // let query = { user: req.user.id };
+    if (status) query.status = status;
+    if (_id) query._id = _id;
+    if (totalAmount) query.totalAmount = totalAmount;
+    const orders = await Order.find(query).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Error searching orders", error });
+  }
+};
+
+exports.searchOrder = async (req, res) => {
+  try {
+    const { status, _id, totalAmount } = req.query;
+
+    let query = { user: req.user.id };
+
+    if (status) query.status = status;
+    if (_id) query._id = _id;
+    if (totalAmount) query.totalAmount = totalAmount;
+    const orders = await Order.find(query).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Error searching orders", error });
   }
 };
