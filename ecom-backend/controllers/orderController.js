@@ -1,8 +1,26 @@
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 
 exports.createOrder = async (req, res) => {
   try {
     const { products, totalAmount, shippingAddress } = req.body;
+
+    for (let item of products) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res
+          .status(404)
+          .json({ message: `Product ${item.product} not found` });
+      }
+      if (product.stock < item.quantity) {
+        return res
+          .status(400)
+          .json({ message: `Insufficient stock for product ${product.name}` });
+      }
+      product.stock -= item.quantity;
+      await product.save();
+    }
+
     const newOrder = new Order({
       user: req.user.id,
       products,

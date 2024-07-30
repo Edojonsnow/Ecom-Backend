@@ -25,6 +25,7 @@ app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/carts", require("./routes/cartRoutes"));
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 const PORT = process.env.PORT || 3002;
 mongoose.connection.once("open", () => {
