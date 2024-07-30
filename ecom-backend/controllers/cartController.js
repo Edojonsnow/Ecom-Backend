@@ -1,9 +1,11 @@
 const Cart = require("../models/Cart");
+const Product = require("../models/Product");
 
 exports.addItemToCart = async (req, res) => {
   try {
-    const { productID, price, quantity } = req.body;
+    const { productID, quantity } = req.body;
     let cart = await Cart.findOne({ user: req.user.id });
+    let product = await Product.findById(productID);
     if (!cart) {
       cart = new Cart({ user: req.user.id, items: [] });
     }
@@ -14,16 +16,15 @@ exports.addItemToCart = async (req, res) => {
     if (existingItem) {
       existingItem.quantity = +existingItem.quantity + +quantity;
     } else {
-      cart.items.push({ product: productID, quantity, price });
+      cart.items.push({ product: productID, quantity, price: product.price });
     }
     cart.total = cart.items.reduce(
-      (total, item) => (total + item.price) * item.quantity,
+      (total, item) => total + item.price * item.quantity,
       0
     );
 
     await cart.save();
     res.json(cart);
-    console.log((existingItem.quantity += quantity));
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Server Error" });
