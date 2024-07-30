@@ -9,6 +9,7 @@ const ProductSchema = new mongoose.Schema({
   color: [String],
   image: { type: String, required: true },
   stock: { type: Number, required: true },
+  lowStockThreshold: { type: Number, default: 5 },
 });
 
 module.exports = mongoose.model("Product", ProductSchema);
