@@ -1,10 +1,22 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const Cart = require("../models/Cart");
+const Flutterwave = require("flutterwave-node-v3");
+const flw = new Flutterwave(
+  process.env.FLW_PUBLIC_KEY,
+  process.env.FLW_SECRET_KEY
+);
+const User = require("../models/User");
+const axios = require("axios");
 
-exports.createOrder = async (req, res) => {
+exports.payForOrder = async (req, res) => {
   try {
-    const { products, totalAmount, shippingAddress } = req.body;
+    const { shippingAddress } = req.body;
 
+    let cart = await Cart.findOne({ user: req.user.id });
+    const products = cart.items;
+    let user = await User.findById(req.user.id);
+    //VERIFY STOCK AVAILABILITY
     for (let item of products) {
       const product = await Product.findById(item.product);
       if (!product) {
@@ -21,21 +33,113 @@ exports.createOrder = async (req, res) => {
       await product.save();
     }
 
-    const newOrder = new Order({
-      user: req.user.id,
-      products,
-      totalAmount,
-      shippingAddress,
-      statusHistory: [{ status: "Pending", note: "Order placed" }],
-    });
-    const savedOrder = await newOrder.save();
-    res.status(201).json(savedOrder);
-  } catch (error) {
-    console.log(error);
-    res.status(400).json({ message: "Invalid order data" });
+    //RANDOM UNIQUE TRANSACTION REFERENCE
+    const txRef = "ORDER-" + Math.floor(Math.random() * 1000000000 + 1);
+
+    //INITIATE PAYMENT
+    const response = await axios.post(
+      "https://api.flutterwave.com/v3/payments",
+      {
+        tx_ref: txRef,
+        amount: cart.total,
+        currency: "NGN",
+        redirect_url: "http://localhost:3002/api/orders/verify",
+        customer: {
+          email: user.email,
+          name: "osas",
+          phonenumber: "0908",
+        },
+        customizations: {
+          title: "Flutterwave Standard Payment",
+        },
+        meta: {
+          products: JSON.stringify(products),
+          shippingAddress,
+          userId: req.user.id,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log(response);
+
+    if (response.data.status === "success") {
+      res.json({
+        paymentUrl: response.data.data.link,
+        txRef: txRef,
+      });
+    } else {
+      res.status(400).json({ message: "Failed to initiate payment" });
+      console.log(payload.error);
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Error initiating payment" });
+    console.error(err.code);
+    console.error(err.response.data);
   }
 };
 
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { transaction_id, tx_ref } = req.query;
+
+    // Verify the transaction
+    const response = await flw.Transaction.verify({ id: transaction_id });
+
+    if (
+      response.data.status === "successful" &&
+      response.data.tx_ref === tx_ref
+    ) {
+      const { products, shippingAddress, userId } = response.data.meta;
+
+      // Create the order
+      const newOrder = new Order({
+        user: userId,
+        products: JSON.parse(products),
+        totalAmount: response.data.amount,
+        shippingAddress,
+        paymentReference: tx_ref,
+      });
+
+      const savedOrder = await newOrder.save();
+
+      // Update product stock
+      for (let item of JSON.parse(products)) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: -item.quantity },
+        });
+      }
+
+      res.json({
+        message: "Payment successful and order created",
+        order: savedOrder,
+      });
+    } else {
+      console.log(response);
+      res.status(400).json({ message: "Payment failed or invalid" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error verifying payment" });
+  }
+};
+
+// exports.verificationFailed = async (req, res) => {
+//   try {
+//     const { status } = req.query;
+//     if (status === "failed") {
+//       console.log("Verification failed");
+//       res.status(200).json({ message: "Payment verification failed" });
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "Error handling verification failure" });
+//   }
+// };
 exports.getUserOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id }).populate(
